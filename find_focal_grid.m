@@ -9,13 +9,14 @@ function find_focal_grid(calibration_loc,wing_hinge_center)
     load('cam_calib.mat');
     
     % Project the uv grid of 256 by 256 pixels to the world reference frame
-    % i think this is a coordinate system
+    %it seems the original image is either cropped or calibration was
+    %performed on a larger image
     [U_grid, V_grid] = meshgrid(385:640,373:628);
     %[U_grid, V_grid] = meshgrid(373:628,385:640);
     
     X_uv = [reshape(U_grid,1,256^2); reshape(V_grid,1,256^2); ones(1,256^2)]; %converts into a 3xsomething matrix containing the coordinates of each point in the image
     
-    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv);
+    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); %not sure how that works without coordinates from two cameras
     XW_cam_2 = camera_to_world_projection(calib_par_cam_2,X_uv);
     XW_cam_3 = camera_to_world_projection(calib_par_cam_3,X_uv);
 %what are RW_1 2 3
@@ -458,7 +459,7 @@ function X_w = camera_to_world_projection(calib_param,X_uv)
     
     K_inv = inv([R t; 0 0 0 1]);
     
-    C_inv = pinv(C);
+    C_inv = pinv(C); %inverse for a nonsquare matrix
     
     X_i = X_uv;
     

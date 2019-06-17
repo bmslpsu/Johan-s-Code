@@ -18,7 +18,7 @@ function tethered_flight_tracker(mov_folder,mov_nr)
     
     bckg = cell(3,1);
 
-    bckg{1} = 1-im2double(imread('background_cam_1.tif'));
+    bckg{1} = 1-im2double(imread('background_cam_1.tif')); %not sure why its 1-image going on
     bckg{2} = 1-im2double(imread('background_cam_2.tif'));
     bckg{3} = 1-im2double(imread('background_cam_3.tif'));
     
@@ -697,16 +697,16 @@ function frames = load_frames(mov_folder,mov_nr,masks,bckg,start_frame,end_frame
 
     frames = cell(3,1);
     
-    for i = 1:3
+    for i = 1:3 %3 is the number of cameras 
 
         cd([mov_folder '/mov_' int2str(mov_nr) '/cam_' int2str(i)]);
 
-        frames{i} = zeros(256,256,N_frames);
+        frames{i} = zeros(256,256,N_frames); % size of the image recorded
 
         for j = start_frame:end_frame
 
-            img_t = (1-im2double(imread(['frame_' int2str(j) '.bmp'])))-bckg{1};
-            img_t(img_t<0.2) = 0;
+            img_t = (1-im2double(imread(['frame_' int2str(j) '.bmp'])))-bckg{1}; %here bckg is 1-originalImage
+            img_t(img_t<0.2) = 0;%this seems to be soem sort of binirization
             frames{i}(:,:,j-start_frame+1) = (masks{i}.img_mask.*(1-masks{i}.tether_mask)).*img_t;
 
         end
@@ -963,7 +963,7 @@ function model = user_input_model(mov_folder, mov_nr)
         
         % Calculate the Tait-Bryan angles which rotate from world to body
         % reference frame:
-        
+        %q-body is the quaternion rotation
         [R_body, q_body] = find_rotation([X_body Y_body Z_body],eye(3));
         
 %         %alpha = asin(X_body(2)/sqrt(1-X_body(3)^2)); % yaw rotation
@@ -989,7 +989,7 @@ function model = user_input_model(mov_folder, mov_nr)
 
         R_strk = [ cos(beta_strk)  0 -sin(beta_strk); ...
                    0               1 0             ; ...
-                   sin(beta_strk) 0 cos(beta_strk) ];
+                   sin(beta_strk)  0 cos(beta_strk) ];
         
         q_strk = mat2quat(R_strk);
         
@@ -1174,6 +1174,7 @@ function [R, q] = find_rotation(E_W,E_B)
        B = B+E_W(:,i)*E_B(:,i)' ;
     end
     %check wahba's problem amd its solution by singular value decomposition
+    %(WS)
    
     [U,S,V] = svd(B);
     
