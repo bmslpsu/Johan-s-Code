@@ -185,7 +185,7 @@ function extract_wing_motion(mov_folder,mov_nr,bckg,model,f_grid,masks,start_fra
 end
 
 function wing_sol = wing_fitting(wing_voxels,model)
-%takes voxels and fits them. won't be needed for my modification(WS)
+
     N_frames = length(wing_voxels.left);
     
     R_strk = model.R_strk;
@@ -576,6 +576,7 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     im1_vec = zeros(256^2,N_frames);
     im2_vec = zeros(256^2,N_frames);
     im3_vec = zeros(256^2,N_frames);
+    
     im1_wing_vec = zeros(256^2,N_frames);
     im2_wing_vec = zeros(256^2,N_frames);
     im3_wing_vec_L = zeros(256^2,N_frames);
@@ -656,7 +657,8 @@ function vox_select = remove_outlying_voxels(vox,joint)
 end
 
 function w_cont = extract_wing_contours(frames,masks)
-
+%finds the contour of both wings in each image.
+%this function is still in 2D
     N_frames = size(frames{1},3);
     
     w_cont = cell(3,1);
@@ -668,10 +670,11 @@ function w_cont = extract_wing_contours(frames,masks)
         for j = 1:N_frames
             
             im_t = frames{i}(:,:,j); %im_t is the image j from camera i
-            im_wing_blur = imgaussfilt(((1-masks{i}.body_mask).*im_t),1);
+            im_wing_blur = imgaussfilt(((1-masks{i}.body_mask).*im_t),1); %mask for body in each view (WS)
             %this function only works with binary images
             [B_wing,~] = bwboundaries(((im_wing_blur>=0.2).*im_wing_blur),'noholes');
-            
+            %finds the boundary of the wings in each image. still in 2D
+            %(WS)
             wing_cont_im = zeros(256,256);
 
             for k = 1:length(B_wing)
