@@ -7,8 +7,10 @@ function find_focal_grid(calibration_loc,wing_hinge_center)
     
     cd(calibration_loc);
     
-    load('cam_calib.mat'); %loads the calib_par_cam_(1,2,3)
-    
+    load('cam_calib.txt'); %loads the calib_par_cam_(1,2,3)
+    calib_par_cam_1=cam_calib(:,1);
+    calib_par_cam_2=cam_calib(:,2);
+    calib_par_cam_3=cam_calib(:,3);
     % Project the uv grid of 256 by 256 pixels to the world reference frame
     %it seems the original image is either cropped or calibration was
     %performed on a larger image (WS)
@@ -17,7 +19,7 @@ function find_focal_grid(calibration_loc,wing_hinge_center)
     
     X_uv = [reshape(U_grid,1,256^2); reshape(V_grid,1,256^2); ones(1,256^2)]; %converts into a 3xsomething matrix containing the coordinates of each point in the image
     
-    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); %not sure how that works without coordinates from two cameras
+    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); %not sure how that works without coordinates from two cameras(WS)
     XW_cam_2 = camera_to_world_projection(calib_par_cam_2,X_uv);
     XW_cam_3 = camera_to_world_projection(calib_par_cam_3,X_uv);
 %some rotations, need clarifications (WS)

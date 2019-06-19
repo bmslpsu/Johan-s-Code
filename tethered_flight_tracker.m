@@ -21,20 +21,24 @@ function tethered_flight_tracker(mov_folder,mov_nr)
     bckg{1} = 1-im2double(imread('background_cam_1.tif')); %not sure why its 1-image going on
     bckg{2} = 1-im2double(imread('background_cam_2.tif')); %this probably has to do with segmentation or binirization later on
     bckg{3} = 1-im2double(imread('background_cam_3.tif'));
-    
+    %turns the background black
     % Ask user to draw tether and body masks:
-    
+    %for each image we have an image, body and tether mask (WS)
     masks = user_input_masks(mov_folder, mov_nr);
     
     % Ask user to construct body and wing models:
-    
+    %wing and wing hinges location in 3D, this is only valid for the rigid
+    %tether (WS)
+    %also its manual....f....
     model = user_input_model(mov_folder, mov_nr);
     
     % Load focal grid:
     
     try
         % Try to load the focal grid matrix:
+        %but what the f1-1ck does a focal grid do?(WS)
         cd([mov_folder '/calibration']);
+        disp('Loading focal grid, the hell does it do?')
         f_grid = load('Focal_grid.mat');
         
     catch
@@ -749,6 +753,8 @@ end
 function model = user_input_model(mov_folder, mov_nr)
 
     % Get body center, wing hinge centers and wing lengths:
+    %this is manual digitization of the fly model which includes wing
+    %hinge, abdomen hinge, wing tip.....
     
     try 
         cd([mov_folder '/fly_model']);
@@ -759,7 +765,7 @@ function model = user_input_model(mov_folder, mov_nr)
         show_frames = 1;
         
         frame_nr = 0;
-        
+        %reads teh first images of the 3 cameras (WS)
         cd([mov_folder '/mov_' int2str(mov_nr) '/cam_1']);
         img_1_t = imread(['frame_' int2str(frame_nr) '.bmp']);
         cd([mov_folder '/mov_' int2str(mov_nr) '/cam_2']);
@@ -779,7 +785,8 @@ function model = user_input_model(mov_folder, mov_nr)
         h_im3 = imshow(img_3_t);
         hold off
         hold off
-        
+        %cycles through the frames until you get a set of images you
+        %like(WS)
         while show_frames == 1
             
             prompt = 'Press enter to proceed to the next frame, press y+enter to select current frame.';
@@ -821,7 +828,7 @@ function model = user_input_model(mov_folder, mov_nr)
         disp('Right wing tip (blue)');
         disp('Double click on the blue point once all points have been positioned correctly');
         
-        figure('name','Camera 1')
+        figure('name','Camera 1')%select nech and wing hinge positions in each frame
         ax_1 = gca;
         hold on
         imshow(img_1_t)
@@ -909,13 +916,14 @@ function model = user_input_model(mov_folder, mov_nr)
         
         cd([mov_folder '/calibration']);
     
-        load('cam_calib.mat');
+        load('cam_calib.mat');%loads the DLT parameters (WS)
         %385 and 373 are the offsets of the image. original image was
-        %larger but was then cropped
+        %larger but was then cropped. I assume...(WS)
         neck_loc_1 = camera_to_world_projection(calib_par_cam_1,[385+hinge_point_neck_1(1); 373+hinge_point_neck_1(2); 1]);
         neck_loc_2 = camera_to_world_projection(calib_par_cam_2,[385+hinge_point_neck_2(1); 373+hinge_point_neck_2(2); 1]);
         neck_loc_3 = camera_to_world_projection(calib_par_cam_3,[385+hinge_point_neck_3(1); 373+hinge_point_neck_3(2); 1]);
-        
+        %convert 2D from 3 images to 3D. However points were selected by
+        %user
         neck_loc = [(neck_loc_2(1)+neck_loc_3(1))/2; (neck_loc_1(2)+neck_loc_3(2))/2; (neck_loc_1(3)+neck_loc_2(3))/2];
         
         abdm_loc_1 = camera_to_world_projection(calib_par_cam_1,[385+hinge_point_abd_1(1); 373+hinge_point_abd_1(2); 1]);

@@ -19,22 +19,25 @@ function tethered_flight_tracker(mov_folder,mov_nr)
     bckg = cell(3,1);
 
     bckg{1} = 1-im2double(imread('background_cam_1.tif')); %not sure why its 1-image going on
-    bckg{2} = 1-im2double(imread('background_cam_2.tif')); %this probably has to do with segmentation
+    bckg{2} = 1-im2double(imread('background_cam_2.tif')); %this probably has to do with segmentation or binirization later on
     bckg{3} = 1-im2double(imread('background_cam_3.tif'));
-    
+    %turns the background black
     % Ask user to draw tether and body masks:
-    
+    %for each image we have an image, body and tether mask (WS)
     masks = user_input_masks(mov_folder, mov_nr);
     
     % Ask user to construct body and wing models:
-    
+    %wing and wing hinges location in 3D, this is only valid for the rigid
+    %tether (WS)
     model = user_input_model(mov_folder, mov_nr);
     
     % Load focal grid:
     
     try
         % Try to load the focal grid matrix:
+        %but what the f1-1ck does a focal grid do?(WS)
         cd([mov_folder '/calibration']);
+        disp('Loading focal grid, the hell does it do?')
         f_grid = load('Focal_grid.mat');
         
     catch
@@ -56,7 +59,7 @@ function tethered_flight_tracker(mov_folder,mov_nr)
     
     % Start saving batches until
     batch_size = 50;
-    
+    %flips the array using fliplr
     pre_trigger_batches = fliplr([(16375-batch_size+1):(-batch_size):8188 8188; 16375:(-batch_size):8188]);
     post_trigger_batches = [0:batch_size:8187; (batch_size-1):batch_size:8187 8187];
     
@@ -96,7 +99,7 @@ function extract_wing_motion(mov_folder,mov_nr,bckg,model,f_grid,masks,start_fra
     frames = load_frames(mov_folder,mov_nr,masks,bckg,start_frame,end_frame);
     
     % Extract wing contours from the images:
-    %these are used to create the voxels later on
+    %these are used to create the voxels later on(WS)
     disp('extract image contours');
     w_cont = extract_wing_contours(frames,masks); 
     
@@ -185,7 +188,7 @@ function extract_wing_motion(mov_folder,mov_nr,bckg,model,f_grid,masks,start_fra
 end
 
 function wing_sol = wing_fitting(wing_voxels,model)
-
+%takes voxels and fits them. won't be needed for my modification(WS)
     N_frames = length(wing_voxels.left);
     
     R_strk = model.R_strk;
@@ -582,10 +585,12 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     im3_wing_vec_R = zeros(256^2,N_frames);
     
     for i = 1:N_frames
-        
+        %image is reshaped to vector and written onto the vector defined
+        %above(WS)
         im1_vec(:,i) = reshape(frames{1}(:,:,i),256^2,1);
         im2_vec(:,i) = reshape(frames{2}(:,:,i),256^2,1);
         im3_vec(:,i) = reshape(frames{3}(:,:,i),256^2,1);
+        
         im1_wing_vec(:,i) = reshape(w_cont{1}(:,:,i),256^2,1);
         im2_wing_vec(:,i) = reshape(w_cont{2}(:,:,i),256^2,1);
         im3_wing_vec_L(:,i) = reshape(masks{3}.im_left_side.*w_cont{3}(:,:,i),256^2,1);
@@ -757,7 +762,7 @@ function model = user_input_model(mov_folder, mov_nr)
         show_frames = 1;
         
         frame_nr = 0;
-        
+        %reads teh first images of the 3 cameras (WS)
         cd([mov_folder '/mov_' int2str(mov_nr) '/cam_1']);
         img_1_t = imread(['frame_' int2str(frame_nr) '.bmp']);
         cd([mov_folder '/mov_' int2str(mov_nr) '/cam_2']);
@@ -777,7 +782,8 @@ function model = user_input_model(mov_folder, mov_nr)
         h_im3 = imshow(img_3_t);
         hold off
         hold off
-        
+        %cycles through the frames until you get a set of images you
+        %like(WS)
         while show_frames == 1
             
             prompt = 'Press enter to proceed to the next frame, press y+enter to select current frame.';
@@ -819,7 +825,7 @@ function model = user_input_model(mov_folder, mov_nr)
         disp('Right wing tip (blue)');
         disp('Double click on the blue point once all points have been positioned correctly');
         
-        figure('name','Camera 1')
+        figure('name','Camera 1')%select nech and wing hinge positions in each frame
         ax_1 = gca;
         hold on
         imshow(img_1_t)
@@ -909,7 +915,7 @@ function model = user_input_model(mov_folder, mov_nr)
     
         load('cam_calib.mat');
         %385 and 373 are the offsets of the image. original image was
-        %larger but was then cropped
+        %larger but was then cropped. I assume.
         neck_loc_1 = camera_to_world_projection(calib_par_cam_1,[385+hinge_point_neck_1(1); 373+hinge_point_neck_1(2); 1]);
         neck_loc_2 = camera_to_world_projection(calib_par_cam_2,[385+hinge_point_neck_2(1); 373+hinge_point_neck_2(2); 1]);
         neck_loc_3 = camera_to_world_projection(calib_par_cam_3,[385+hinge_point_neck_3(1); 373+hinge_point_neck_3(2); 1]);
