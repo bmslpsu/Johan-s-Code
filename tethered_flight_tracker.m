@@ -588,6 +588,8 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     for i = 1:N_frames
         %image is reshaped to vector and written onto the vector defined
         %above(WS)
+        %frame is a cell of dim 3. each dimension has 50 frames of
+        %images(WS)
         im1_vec(:,i) = reshape(frames{1}(:,:,i),256^2,1);
         im2_vec(:,i) = reshape(frames{2}(:,:,i),256^2,1);
         im3_vec(:,i) = reshape(frames{3}(:,:,i),256^2,1);
@@ -600,10 +602,46 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     end
     
     % Multiply the vectorized images with the voxel projection matrices:
-    im1_proj = f_grid.vox_1_mat*sparse(im1_vec);
+    im1_proj = f_grid.vox_1_mat*sparse(im1_vec); %dim of this is 257^3, no idea why(WS)
     im2_proj = f_grid.vox_2_mat*sparse(im2_vec);
     im3_proj = f_grid.vox_3_mat*sparse(im3_vec);
     
+    % WS: this is a bit of code I added to do some debugging stuff
+    %The lack of alcohol in the lab bothers me
+    %
+    figure
+    im_11=reshape(full(im1_proj(:,1)),[257,257,257]);
+    idx = find(im_11);
+    [X, Y, Z] = ind2sub(size(im_11), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_11(idx));
+    colormap(gray(256));
+    
+    figure
+    im_22=reshape(full(im2_proj(:,1)),[257,257,257]);
+    idx = find(im_22);
+    [X, Y, Z] = ind2sub(size(im_22), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_22(idx));
+    colormap(gray(256));
+    
+    figure
+    im_33=reshape(full(im3_proj(:,1)),[257,257,257]);
+    idx = find(im_33);
+    [X, Y, Z] = ind2sub(size(im_33), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_33(idx));
+    colormap(gray(256));
+    
+    im_3d=im1_proj(:,1).*im2_proj(:,1).*im3_proj(:,1);
+    im_33d=reshape(full(im_3d),[257,257,257]);
+    idx = find(im_33d);
+    [X, Y, Z] = ind2sub(size(im_33d), idx);
+    pointsize = 20;
+    figure
+    scatter3(X(:), Y(:), Z(:), pointsize, im_33d(idx));
+    colormap(gray(256));
+    %Wael Modification ends here. still no alcohol
     im1_wing_proj = f_grid.vox_1_mat*sparse(im1_wing_vec);
     im2_wing_proj = f_grid.vox_2_mat*sparse(im2_wing_vec);
     im3_wing_proj_L = f_grid.vox_3_mat*sparse(im3_wing_vec_L);
