@@ -634,6 +634,7 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     colormap(gray(256));
     
     im_3d=im1_proj(:,1).*im2_proj(:,1).*im3_proj(:,1);
+    im_3d(im_3d<0.15)=0;
     im_33d=reshape(full(im_3d),[257,257,257]);
     idx = find(im_33d);
     [X, Y, Z] = ind2sub(size(im_33d), idx);
