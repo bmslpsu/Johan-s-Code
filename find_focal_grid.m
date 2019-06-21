@@ -19,7 +19,7 @@ function find_focal_grid(calibration_loc,wing_hinge_center)
     
     X_uv = [reshape(U_grid,1,256^2); reshape(V_grid,1,256^2); ones(1,256^2)]; %converts into a 3xsomething matrix containing the coordinates of each point in the image
     
-    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); %not sure how that works without coordinates from two cameras(WS)
+    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); 
     XW_cam_2 = camera_to_world_projection(calib_par_cam_2,X_uv);
     XW_cam_3 = camera_to_world_projection(calib_par_cam_3,X_uv);
 %some rotations, need clarifications (WS)
