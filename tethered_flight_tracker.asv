@@ -18,9 +18,9 @@ function tethered_flight_tracker(mov_folder,mov_nr)
     
     bckg = cell(3,1);
 
-    bckg{1} = 1-im2double(imread('background_cam_1.tif')); %not sure why its 1-image going on
+    bckg{1} = 1-im2double(imread('background_cam_1.tif')); %inverts the colors of the image
     bckg{2} = 1-im2double(imread('background_cam_2.tif')); %this probably has to do with segmentation or binirization later on
-    bckg{3} = 1-im2double(imread('background_cam_3.tif'));
+    bckg{3} = 1-im2double(imread('background_cam_3.tif'));%
     %turns the background black
     % Ask user to draw tether and body masks:
     %for each image we have an image, body and tether mask (WS)
@@ -978,7 +978,7 @@ function model = user_input_model(mov_folder, mov_nr)
         
         wingtip_point_L_2 = camera_to_world_projection(calib_par_cam_2,[385+wingtip_point_L_2(1); 373+wingtip_point_L_2(2); 1]);
         wingtip_point_L_3 = camera_to_world_projection(calib_par_cam_3,[385+wingtip_point_L_3(1); 373+wingtip_point_L_3(2); 1]);
-        
+        %385 and 373 are added since calibration was performed on a larger
         wing_tip_loc_L = [(wingtip_point_L_2(1)+wingtip_point_L_3(1))/2; wingtip_point_L_3(2); wingtip_point_L_2(3)];
         
         wing_hinge_loc_R_1 = camera_to_world_projection(calib_par_cam_1,[385+hinge_point_wing_R_1(1); 373+hinge_point_wing_R_1(2); 1]);
