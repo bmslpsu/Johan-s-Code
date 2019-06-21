@@ -29,6 +29,7 @@ function tethered_flight_tracker(mov_folder,mov_nr)
     % Ask user to construct body and wing models:
     %wing and wing hinges location in 3D, this is only valid for the rigid
     %tether (WS)
+    %also its manual....f....
     model = user_input_model(mov_folder, mov_nr);
     
     % Load focal grid:
@@ -587,6 +588,8 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     for i = 1:N_frames
         %image is reshaped to vector and written onto the vector defined
         %above(WS)
+        %frame is a cell of dim 3. each dimension has 50 frames of
+        %images(WS)
         im1_vec(:,i) = reshape(frames{1}(:,:,i),256^2,1);
         im2_vec(:,i) = reshape(frames{2}(:,:,i),256^2,1);
         im3_vec(:,i) = reshape(frames{3}(:,:,i),256^2,1);
@@ -599,10 +602,47 @@ function wing_voxels = select_wing_voxels(frames,f_grid,w_cont,masks)
     end
     
     % Multiply the vectorized images with the voxel projection matrices:
-    im1_proj = f_grid.vox_1_mat*sparse(im1_vec);
+    im1_proj = f_grid.vox_1_mat*sparse(im1_vec); %dim of this is 257^3, no idea why(WS)
     im2_proj = f_grid.vox_2_mat*sparse(im2_vec);
     im3_proj = f_grid.vox_3_mat*sparse(im3_vec);
     
+    % WS: this is a bit of code I added to do some debugging stuff
+    %The lack of alcohol in the lab bothers me
+    %
+    figure
+    im_11=reshape(full(im1_proj(:,1)),[257,257,257]);
+    idx = find(im_11);
+    [X, Y, Z] = ind2sub(size(im_11), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_11(idx));
+    colormap(gray(256));
+    
+    figure
+    im_22=reshape(full(im2_proj(:,1)),[257,257,257]);
+    idx = find(im_22);
+    [X, Y, Z] = ind2sub(size(im_22), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_22(idx));
+    colormap(gray(256));
+    
+    figure
+    im_33=reshape(full(im3_proj(:,1)),[257,257,257]);
+    idx = find(im_33);
+    [X, Y, Z] = ind2sub(size(im_33), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_33(idx));
+    colormap(gray(256));
+    
+    im_3d=im1_proj(:,1).*im2_proj(:,1).*im3_proj(:,1);
+    im_3d(im_3d<0.15)=0;
+    im_33d=reshape(full(im_3d),[257,257,257]);
+    idx = find(im_33d);
+    [X, Y, Z] = ind2sub(size(im_33d), idx);
+    pointsize = 20;
+    figure
+    scatter3(X(:), Y(:), Z(:), pointsize, im_33d(idx));
+    colormap(gray(256));
+    %Wael Modification ends here. still no alcohol
     im1_wing_proj = f_grid.vox_1_mat*sparse(im1_wing_vec);
     im2_wing_proj = f_grid.vox_2_mat*sparse(im2_wing_vec);
     im3_wing_proj_L = f_grid.vox_3_mat*sparse(im3_wing_vec_L);
@@ -752,6 +792,8 @@ end
 function model = user_input_model(mov_folder, mov_nr)
 
     % Get body center, wing hinge centers and wing lengths:
+    %this is manual digitization of the fly model which includes wing
+    %hinge, abdomen hinge, wing tip.....
     
     try 
         cd([mov_folder '/fly_model']);
@@ -913,13 +955,14 @@ function model = user_input_model(mov_folder, mov_nr)
         
         cd([mov_folder '/calibration']);
     
-        load('cam_calib.mat');
+        load('cam_calib.mat');%loads the DLT parameters (WS)
         %385 and 373 are the offsets of the image. original image was
-        %larger but was then cropped. I assume.
+        %larger but was then cropped. I assume...(WS)
         neck_loc_1 = camera_to_world_projection(calib_par_cam_1,[385+hinge_point_neck_1(1); 373+hinge_point_neck_1(2); 1]);
         neck_loc_2 = camera_to_world_projection(calib_par_cam_2,[385+hinge_point_neck_2(1); 373+hinge_point_neck_2(2); 1]);
         neck_loc_3 = camera_to_world_projection(calib_par_cam_3,[385+hinge_point_neck_3(1); 373+hinge_point_neck_3(2); 1]);
-        
+        %convert 2D from 3 images to 3D. However points were selected by
+        %user
         neck_loc = [(neck_loc_2(1)+neck_loc_3(1))/2; (neck_loc_1(2)+neck_loc_3(2))/2; (neck_loc_1(3)+neck_loc_2(3))/2];
         
         abdm_loc_1 = camera_to_world_projection(calib_par_cam_1,[385+hinge_point_abd_1(1); 373+hinge_point_abd_1(2); 1]);
