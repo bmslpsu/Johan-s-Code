@@ -1,0 +1,266 @@
+clc 
+clear all
+close all
+%% directories
+root='S:\Public\Wael\Cal4\Test vid\TestVid1\';
+calibration_dir='S:\Public\Wael\Cal4\DLT\';
+
+
+%% find the necl location
+neck_loc = Find_Neck_Location(root,calibration_dir)
+
+%% generate the focal grid
+find_focal_grid_WS_v1(calibration_dir,neck_loc)
+%% creates background
+bcgk=load_and_generate_background(root);
+%% create the focal grid
+calib_location='S:\Public\Wael\Cal4\DLT';
+%% Functions---------------------------------------------------------------
+%--------------------------------------------------------------------------
+
+function [neck_loc, neck_location_images] = Find_Neck_Location(root,calibration_dir)
+%in this part of my code, this function only serves to find the location of
+%a single point which will be used for reference
+ 
+
+        % Ask user to iterate trough frames until a frame comes up with a
+        % good view of the wings fully extended:
+        show_frames = 1;
+        
+        frame_nr = 0;
+        %reads the first images of the 3 cameras (WS)
+        
+        v_1 = VideoReader([root 'fly_calibrated_640x480_C001H001S0001.avi']);
+        v_2 = VideoReader([root 'fly_calibrated_640x480_C002H001S0001.avi']);
+        v_3 = VideoReader([root 'fly_calibrated_640x480_C003H001S0001.avi']);
+        
+        img_1_t = readFrame(v_1);
+        img_2_t = readFrame(v_2);
+        img_3_t = readFrame(v_3);
+        
+        figure()
+        hold on
+        subplot(1,3,1); hold on
+        h_im1 = imshow(img_1_t);
+        hold off
+        subplot(1,3,2); hold on
+        h_im2 = imshow(img_2_t);
+        hold off
+        subplot(1,3,3); hold on
+        h_im3 = imshow(img_3_t);
+        hold off
+        hold off
+        %cycles through the frames until you get a set of images you
+        %like(WS)
+        while show_frames == 1
+            
+            prompt = 'Press enter to proceed to the next frame, press y+enter to select current frame.';
+            str = input(prompt,'s');
+            if isempty(str)==1
+                frame_nr = frame_nr+1;
+                
+                img_1_t = readFrame(v_1);
+                img_2_t = readFrame(v_2);
+                img_3_t = readFrame(v_3);
+                
+                set(h_im1, 'CData', img_1_t);
+                set(h_im2, 'CData', img_2_t);
+                set(h_im3, 'CData', img_3_t);
+                
+                drawnow;
+                
+            elseif strcmp(str,'y')==1
+                show_frames = 0;
+                close all;
+            else
+                % do nothing
+            end
+        end
+        
+        disp(['frame nr ' int2str(frame_nr) ' has been selected.']);
+        
+        % Display the 3 different views of the selected frame in 3 figures
+        % and ask the user to select the wing, neck and
+        % abdomen hinge points:
+        
+
+        disp('Select the neck hinge in each image. Start with Camera 1 view');
+        
+        figure('name','Camera 1')%select neck and wing hinge positions in each frame
+        ax_1 = gca;
+        hold on
+        imshow(img_1_t)
+        hold off
+        neck_joint_1 = impoint(ax_1);
+        setColor(neck_joint_1,'b');
+        wait(neck_joint_1);
+        Neck_Position_1 = getPosition(neck_joint_1);
+        
+        disp('Select the neck hinge point in the Camera 2 view');
+        disp('Double click on the red point once all points have been positioned correctly');
+        figure('name','Camera 2')
+        ax_2 = gca;
+        hold on
+        imshow(img_2_t);
+        hold off
+        neck_joint_2 = impoint(ax_2);
+        setColor(neck_joint_2,'r');
+        wait(neck_joint_2);
+        Neck_Position_2 = getPosition(neck_joint_2);
+        
+        disp('Select the neck hinge point in the Camera 3 view');
+        disp('Double click on the blue point once all points have been positioned correctly');
+        figure('name','Camera 3')
+        ax_3 = gca;
+        hold on
+        imshow(img_3_t);
+        hold off
+        neck_joint_3 = impoint(ax_3);
+        setColor(neck_joint_3,'b');
+        wait(neck_joint_3);
+        Neck_Position_3 = getPosition(neck_joint_3);
+        close all;
+        
+        % Calculate 3D locations by averaging the point locations:
+        load([calibration_dir 'DLT.txt']);%loads the DLT parameters (WS)
+        %385 and 373 are the offsets of the image. original image was
+        %larger but was then cropped. I assume...(WS)
+        calib_par_cam_1=DLT(:,1);
+        calib_par_cam_2=DLT(:,2);
+        calib_par_cam_3=DLT(:,3);
+        neck_loc_1 = camera_to_world_projection(calib_par_cam_1,[Neck_Position_1(1); Neck_Position_1(2); 1]);
+        neck_loc_2 = camera_to_world_projection(calib_par_cam_2,[Neck_Position_2(1); Neck_Position_2(2); 1]);
+        neck_loc_3 = camera_to_world_projection(calib_par_cam_3,[Neck_Position_3(1); Neck_Position_3(2); 1]);
+        %convert 2D from 3 images to 3D. However points were selected by
+        %user
+        neck_loc = [(neck_loc_2(1)+neck_loc_3(1))/2; (neck_loc_1(2)+neck_loc_3(2))/2; (neck_loc_1(3)+neck_loc_2(3))/2];
+        
+    end
+
+function X_w = camera_to_world_projection(calib_param,X_uv)
+
+    C = [calib_param(1) calib_param(3) 0 0; ...
+         0              calib_param(2) 0 0; ...
+         0              0              0 1];
+     
+    theta = sqrt(calib_param(4)^2+calib_param(5)^2+calib_param(6)^2);
+    omega = [ 0 -calib_param(6) calib_param(5); ...
+              calib_param(6) 0 -calib_param(4); ...
+              -calib_param(5) calib_param(4) 0 ];
+    R = eye(3)+(sin(theta)/theta)*omega+((1-cos(theta))/theta^2)*(omega*omega);
+    
+    t = [calib_param(7); calib_param(8); calib_param(9)];
+    
+    K_inv = inv([R t; 0 0 0 1]);
+    
+    C_inv = pinv(C);
+    
+    X_i = X_uv;
+    
+    X_w = K_inv*C_inv*X_i;
+
+end
+
+function bckg = load_and_generate_background(root)
+
+bckg=cell(3,1);
+v = VideoReader([root 'fly_calibrated_640x480_C001H001S0001.avi']);
+bckg{1}= readFrame(v);
+
+v = VideoReader([root 'fly_calibrated_640x480_C002H001S0001.avi']);
+bckg{2}= readFrame(v);
+
+v = VideoReader([root 'fly_calibrated_640x480_C003H001S0001.avi']);
+bckg{3}= readFrame(v);
+% sho the images
+figure (1)
+imshow(bckg{1})
+h = roipoly;
+bckg{1}(h==1)=240;
+close (1)
+figure (1)
+imshow(bckg{1})
+h = roipoly;
+bckg{1}(h==1)=240;
+close(1)
+figure (1)
+imshow(bckg{1})
+h = roipoly;
+bckg{1}(h==1)=240;
+close (1)
+end
+
+function wing_voxels = reconstruct_3D_model(frames,f_grid)
+%modified from johans code, this doesnt need the mask and model
+    N_frames = size(frames{1},3);
+    
+    % Reshape all frames to vectors:
+    [image_width, image_length]=size(frames{1}); % finds the size of the image
+    im1_vec = zeros(image_width*image_length,N_frames);
+    im2_vec = zeros(image_width*image_length,N_frames);
+    im3_vec = zeros(image_width*image_length,N_frames);
+
+    
+    for i = 1:N_frames
+        %image is reshaped to vector and written onto the vector defined
+        %above(WS)
+        %frame is a cell of dim 3. each dimension has 50 frames of
+        %images(WS)
+        im1_vec(:,i) = reshape(frames{1}(:,:,i),image_width*image_length,1);
+        im2_vec(:,i) = reshape(frames{2}(:,:,i),image_width*image_length,1);
+        im3_vec(:,i) = reshape(frames{3}(:,:,i),image_width*image_length,1);
+        
+
+        
+    end
+    
+    % Multiply the vectorized images with the voxel projection matrices:
+    im1_proj = f_grid.vox_1_mat*sparse(im1_vec); %dim of this is 257^3, no idea why(WS)
+    im2_proj = f_grid.vox_2_mat*sparse(im2_vec);
+    im3_proj = f_grid.vox_3_mat*sparse(im3_vec);
+    
+    % WS: this is a bit of code I added to do some debugging stuff
+    %The lack of alcohol in the lab bothers me
+    %
+    figure
+    im_11=reshape(full(im1_proj(:,1)),[257,257,257]);
+    idx = find(im_11);
+    [X, Y, Z] = ind2sub(size(im_11), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_11(idx));
+    colormap(gray(256));
+    
+    figure
+    im_22=reshape(full(im2_proj(:,1)),[257,257,257]);
+    idx = find(im_22);
+    [X, Y, Z] = ind2sub(size(im_22), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_22(idx));
+    colormap(gray(256));
+    
+    figure
+    im_33=reshape(full(im3_proj(:,1)),[257,257,257]);
+    idx = find(im_33);
+    [X, Y, Z] = ind2sub(size(im_33), idx);
+    pointsize = 20;
+    scatter3(X(:), Y(:), Z(:), pointsize, im_33(idx));
+    colormap(gray(256));
+    
+    im_3d=im1_proj(:,1).*im2_proj(:,1).*im3_proj(:,1);
+    im_3d(im_3d<0.15)=0;
+    im_33d=reshape(full(im_3d),[257,257,257]);
+    idx = find(im_33d);
+    [X, Y, Z] = ind2sub(size(im_33d), idx);
+    pointsize = 20;
+    figure
+    scatter3(X(:), Y(:), Z(:), pointsize, im_33d(idx));
+    colormap(gray(256));
+    %Wael Modification ends here. still no alcohol
+    im1_wing_proj = f_grid.vox_1_mat*sparse(im1_wing_vec);
+    im2_wing_proj = f_grid.vox_2_mat*sparse(im2_wing_vec);
+    im3_wing_proj_L = f_grid.vox_3_mat*sparse(im3_wing_vec_L);
+    im3_wing_proj_R = f_grid.vox_3_mat*sparse(im3_wing_vec_R);
+   
+
+end
+
