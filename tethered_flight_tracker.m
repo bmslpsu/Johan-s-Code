@@ -38,7 +38,7 @@ function tethered_flight_tracker(mov_folder,mov_nr)
         % Try to load the focal grid matrix:
         %but what the f1-1ck does a focal grid do?(WS)
         cd([mov_folder '/calibration']);
-        disp('Loading focal grid, the hell does it do?')
+        disp('Loading focal grid.')
         f_grid = load('Focal_grid.mat');
         
     catch

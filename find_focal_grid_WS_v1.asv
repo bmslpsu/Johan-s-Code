@@ -1,25 +1,18 @@
-function find_focal_grid(calibration_loc,wing_hinge_center)
-%consider replacing this with image center (WS)
-% can probably remove this input to the function(WS)
-    close all;
+function find_focal_grid_WS_v1(calibration_loc,neck_loc,neck_loc_images)
 
-    % Reconstruct the focal grid using the calibration file:
-    
-    cd(calibration_loc);
-    
-    load('cam_calib.txt'); %loads the calib_par_cam_(1,2,3)
-    calib_par_cam_1=cam_calib(:,1);
-    calib_par_cam_2=cam_calib(:,2);
-    calib_par_cam_3=cam_calib(:,3);
-    % Project the uv grid of 256 by 256 pixels to the world reference frame
-    %it seems the original image is either cropped or calibration was
-    %performed on a larger image (WS)
-    [U_grid, V_grid] = meshgrid(385:640,373:628);
+%modified so it doesn't need any model and mask info
+neck_loc_images=round(neck_loc_images); %needs to be rounded so that it has no decimal points (might not be needed but makes things simpler for now)
+load([calibration_loc 'DLT.txt']); %loads the calib_par_cam_(1,2,3)
+calib_par_cam_1=DLT(:,1);
+    calib_par_cam_2=DLT(:,2);
+    calib_par_cam_3=DLT(:,3);
+
+    [U_grid, V_grid] = meshgrid(1:640,1:480);
     %for my apploication can use 1:end for length and width of image(WS)
     
-    X_uv = [reshape(U_grid,1,256^2); reshape(V_grid,1,256^2); ones(1,256^2)]; %converts into a 3xsomething matrix containing the coordinates of each point in the image
-    %this actually shows the coordinates of the image in the world plane
-    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); %not sure how that works without coordinates from two cameras(WS)
+    X_uv = [reshape(U_grid,1,640*480); reshape(V_grid,1,640*480); ones(1,640*480)]; %converts into a 3xsomething matrix containing the coordinates of each point in the image
+    
+    XW_cam_1 = camera_to_world_projection(calib_par_cam_1,X_uv); 
     XW_cam_2 = camera_to_world_projection(calib_par_cam_2,X_uv);
     XW_cam_3 = camera_to_world_projection(calib_par_cam_3,X_uv);
 %some rotations, need clarifications (WS)
@@ -31,16 +24,29 @@ function find_focal_grid(calibration_loc,wing_hinge_center)
     e2 = RW_2'*[0; 0; -1];%vector along which i am extruding the image
     e3 = RW_3'*[0; 0; -1];
     
-%     TW_cam_1 = camera_to_world_projection(calib_par_cam_1,[385+im_cent_cam_1(1); 373+im_cent_cam_1(2); 1]);
-%     TW_cam_2 = camera_to_world_projection(calib_par_cam_2,[385+im_cent_cam_2(1); 373+im_cent_cam_2(2); 1]);
-%     TW_cam_3 = camera_to_world_projection(calib_par_cam_3,[385+im_cent_cam_3(1); 373+im_cent_cam_3(2); 1]);
+  
+    %creates an empty image to crop the actual image 
+    zero_mat1=zeros(480,640);
+    zero_mat2=zeros(480,640);
+    zero_mat3=zeros(480,640);
+    zero_mat1(neck_loc_images(1,2)-127:neck_loc_images(1,2)+128,neck_loc_images(1,1)-127:neck_loc_images(1,1)+128)=1;
+    zero_mat2(neck_loc_images(2,2)-127:neck_loc_images(2,2)+128,neck_loc_images(2,1)-127:neck_loc_images(2,1)+128)=1;
+    zero_mat3(neck_loc_images(3,2)-127:neck_loc_images(3,2)+128,neck_loc_images(3,1)-127:neck_loc_images(3,1)+128)=1;
     
+    reshaped1=reshape(zero_mat1,1,640*480);
+    reshaped2=reshape(zero_mat2,1,640*480);
+    reshaped3=reshape(zero_mat3,1,640*480);
+
     P1 = XW_cam_1(1:3,:);
     P2 = XW_cam_2(1:3,:);
     P3 = XW_cam_3(1:3,:);
+    
+    P_11=P1(:,find(reshaped1==1));
+    P_22=P2(:,find(reshaped2==1));
+    P_33=P3(:,find(reshaped3==1));
     %P_vox coordinates of the voxels 
     %P_vox_neighbors coordinates :helps disregard certain voxels
-    [vox_1_mat, vox_2_mat, vox_3_mat, P_vox, P_vox_neighbor] = calculate_focal_grid(e1,e2,e3,P1,P2,P3,wing_hinge_center);
+    [vox_1_mat, vox_2_mat, vox_3_mat, P_vox, P_vox_neighbor] = calculate_focal_grid(e1,e2,e3,P_11,P_22,P_33,neck_loc);
     %vox matricies, need a reference(WS)
     whos vox_1_mat
     whos vox_2_mat
@@ -124,6 +130,7 @@ function [vox_1_mat, vox_2_mat, vox_3_mat, P_vox, P_vox_neighbor] = calculate_fo
 %     dx_D3 = -(P3_XY(1,1)-P3_XY(1,256))/510;
 %     dy_D3 = -(P3_XY(2,1)-P3_XY(2,256))/510;
     
+%256^2x10
     P1_grid = [reshape(P1_YZ(2,:),256^2,1) reshape(P1_YZ(3,:),256^2,1) ...
                reshape(P1_YZ(2,:),256^2,1)+dy_dz_1*(dz_1/2) reshape(P1_YZ(3,:),256^2,1)+dz_1/2 ...
                reshape(P1_YZ(2,:),256^2,1)+dy_1/2 reshape(P1_YZ(3,:),256^2,1)+dz_dy_1*(dy_1/2) ...
